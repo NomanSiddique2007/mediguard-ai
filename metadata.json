@@ -1,0 +1,6 @@
+{
+  "name": "MediGuard AI",
+  "description": "A modern, premium healthcare application providing AI-powered prescription scanning, drug interaction alerts, health timelines, and intelligent medication management.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
