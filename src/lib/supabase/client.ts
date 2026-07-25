@@ -31,7 +31,7 @@ export const authService = {
     if (!isSupabaseConfigured()) {
       return { data: { user: null, session: null }, error: new Error('Supabase is not configured') };
     }
-    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const redirectUrl = 'https://mediguard-ai-ruby.vercel.app/';
     return await supabase.auth.signUp({
       email,
       password,
@@ -62,7 +62,7 @@ export const authService = {
     if (!isSupabaseConfigured()) {
       return { data: null, error: new Error('Supabase is not configured') };
     }
-    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const redirectUrl = 'https://mediguard-ai-ruby.vercel.app/';
     return await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });
