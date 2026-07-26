@@ -83,7 +83,8 @@ interface AppContextType {
   authLoading: boolean;
   
   // Auth Actions
-  signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
   loginDemo: (role: 'Patient' | 'Doctor' | 'Admin') => void;
 }
@@ -570,7 +571,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         userRole: (userProfile.role as any) || 'Patient',
         isEmailVerified: true,
         authLoading: auth.isLoading,
-        signInWithGoogle: auth.signInWithGoogle,
+        signInWithEmail: auth.signInWithEmail,
+        signUpWithEmail: auth.signUpWithEmail,
         logout: handleLogout,
         loginDemo,
       }}

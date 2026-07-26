@@ -1,15 +1,14 @@
 import React, { useEffect } from 'react';
-import { Shield, Lock, Loader2 } from 'lucide-react';
+import { Lock, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useApp } from '../../context/AppContext';
-import { GoogleSignInButton } from '../auth/GoogleSignInButton';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, signInWithGoogle, error } = useAuth();
+  const { isAuthenticated, isLoading, error } = useAuth();
   const { setCurrentPage, addToast } = useApp();
 
   useEffect(() => {
@@ -18,9 +17,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       addToast({
         type: 'warning',
         title: 'Authentication Required',
-        message: 'Please sign in with Google to access the MediGuard patient safety portal.',
+        message: 'Please sign in to access the MediGuard patient safety portal.',
       });
-      setCurrentPage('landing');
+      setCurrentPage('login');
     }
   }, [isAuthenticated, isLoading, setCurrentPage, addToast]);
 
@@ -33,7 +32,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           </div>
           <div>
             <h3 className="text-base font-extrabold text-slate-900">Verifying Security Session</h3>
-            <p className="text-xs text-slate-500 mt-1">Restoring Google OAuth session & profile details...</p>
+            <p className="text-xs text-slate-500 mt-1">Restoring session & profile details...</p>
           </div>
         </div>
       </div>
@@ -50,7 +49,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           <div>
             <h3 className="text-lg font-black text-slate-900">Access Restricted</h3>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              You must be authenticated via Google to access patient health records & AI safety tools.
+              You must be signed in to access patient health records & AI safety tools.
             </p>
           </div>
 
@@ -60,15 +59,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             </div>
           )}
 
-          <GoogleSignInButton
-            onClick={async () => {
-              try {
-                await signInWithGoogle();
-              } catch (e) {
-                // error handled in useAuth
-              }
-            }}
-          />
+          <button
+            onClick={() => setCurrentPage('login')}
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all"
+          >
+            <span>Go to Sign In Portal</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
 
           <button
             onClick={() => setCurrentPage('landing')}

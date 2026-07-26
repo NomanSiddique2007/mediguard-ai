@@ -13,7 +13,9 @@ interface AuthContextType {
   isLoading: boolean;
   loading: boolean;
   error: string | null;
-  signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, fullName?: string) => Promise<void>;
+  loginAsDemo: (role?: 'Patient' | 'Doctor' | 'Admin') => void;
   logout: () => Promise<void>;
   clearError: () => void;
   setUserProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
@@ -88,87 +90,221 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
-    if (!isSupabaseConfigured()) {
-      // If Supabase credentials are not set, preserve local session state for dev preview
-      const localSession = localStorage.getItem('mediguard_demo_session');
-      if (localSession === 'true') {
-        setIsAuthenticated(true);
-        setUserProfile(MOCK_USER);
-      } else {
-        setIsAuthenticated(false);
+    const initSession = async () => {
+      setLoading(true);
+      try {
+        if (!isSupabaseConfigured()) {
+          // If Supabase credentials are not set, preserve local session state for dev preview
+          const localSession = localStorage.getItem('mediguard_demo_session');
+          if (localSession === 'true') {
+            setIsAuthenticated(true);
+            setUserProfile(MOCK_USER);
+          } else {
+            setIsAuthenticated(false);
+          }
+          if (mounted) setLoading(false);
+          return;
+        }
+
+        const { data: { session: currentSession }, error: sessionErr } = await supabase.auth.getSession();
+
+        if (sessionErr) {
+          throw sessionErr;
+        }
+
+        if (currentSession && currentSession.user) {
+          if (mounted) {
+            setSession(currentSession);
+            setUser(currentSession.user);
+            setIsAuthenticated(true);
+            handleAuthUserSync(currentSession.user).catch((err) =>
+              console.error('Non-blocking user sync error:', err)
+            );
+            setLoading(false);
+          }
+        } else {
+          // Check if URL has OAuth redirect parameters (?code= or #access_token=)
+          const hasOAuthCallbackParams =
+            typeof window !== 'undefined' &&
+            (window.location.search.includes('code=') || window.location.hash.includes('access_token='));
+
+          if (hasOAuthCallbackParams) {
+            // Keep loading = true to give onAuthStateChange time to process the OAuth callback
+            // Failsafe timer in case OAuth processing fails
+            setTimeout(() => {
+              if (mounted) setLoading(false);
+            }, 3500);
+          } else {
+            if (mounted) {
+              setSession(null);
+              setUser(null);
+              setIsAuthenticated(false);
+              setLoading(false);
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error('Session restoration error:', err);
+        if (mounted) {
+          setError(err.message || 'Network error restoring session.');
+          setLoading(false);
+        }
       }
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && currentSession?.user) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-        setIsAuthenticated(true);
-        handleAuthUserSync(currentSession.user).catch((err) =>
-          console.error('Non-blocking user sync error on auth state change:', err)
-        );
-      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !currentSession?.user)) {
-        setSession(null);
-        setUser(null);
-        setIsAuthenticated(false);
-        setUserProfile(MOCK_USER);
-      }
-      if (mounted) setLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      authListener.subscription.unsubscribe();
     };
+
+    initSession();
+
+    if (isSupabaseConfigured()) {
+      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && currentSession?.user) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          setIsAuthenticated(true);
+          handleAuthUserSync(currentSession.user).catch((err) =>
+            console.error('Non-blocking user sync error on auth state change:', err)
+          );
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setIsAuthenticated(false);
+          setUserProfile(MOCK_USER);
+        }
+        if (mounted) setLoading(false);
+      });
+
+      return () => {
+        mounted = false;
+        authListener.subscription.unsubscribe();
+      };
+    }
   }, [handleAuthUserSync]);
 
-  // Google OAuth Sign In
-  const signInWithGoogle = async () => {
+  // Email & Password Sign In
+  const signInWithEmail = async (email: string, pass: string) => {
     setLoading(true);
     setError(null);
 
     try {
       if (!isSupabaseConfigured()) {
-        // Fallback demo Google authentication if environment keys are placeholders
         localStorage.setItem('mediguard_demo_session', 'true');
         setIsAuthenticated(true);
         setUserProfile({
           ...MOCK_USER,
-          fullName: 'Alexander Vance (Google)',
-          email: 'alexander.vance@gmail.com',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          fullName: email.split('@')[0] || 'Patient User',
+          email: email,
         });
         setLoading(false);
         return;
       }
 
-      const redirectUrl = window.location.origin;
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password: pass,
+      });
 
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+      if (authError) {
+        throw authError;
+      }
+
+      if (data.session && data.user) {
+        setSession(data.session);
+        setUser(data.user);
+        setIsAuthenticated(true);
+        await handleAuthUserSync(data.user);
+      }
+    } catch (err: any) {
+      console.error('Email Sign-In Error:', err);
+      const msg = err.message || 'Invalid email or password. Please try again.';
+      setError(msg);
+      setIsAuthenticated(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Email Sign Up
+  const signUpWithEmail = async (email: string, pass: string, fullName?: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!isSupabaseConfigured()) {
+        localStorage.setItem('mediguard_demo_session', 'true');
+        setIsAuthenticated(true);
+        setUserProfile({
+          ...MOCK_USER,
+          fullName: fullName || email.split('@')[0] || 'Patient User',
+          email: email,
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password: pass,
         options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+          data: {
+            full_name: fullName || email.split('@')[0],
           },
         },
       });
 
-      if (oauthError) {
-        throw oauthError;
+      if (authError) {
+        throw authError;
+      }
+
+      if (data.session && data.user) {
+        setSession(data.session);
+        setUser(data.user);
+        setIsAuthenticated(true);
+        await handleAuthUserSync(data.user);
+      } else if (data.user) {
+        // Confirmation email sent or pending
+        localStorage.setItem('mediguard_demo_session', 'true');
+        setIsAuthenticated(true);
       }
     } catch (err: any) {
-      console.error('Google Sign-In Error:', err);
-      const msg = err.message || 'Google authentication was cancelled or failed due to network connectivity.';
+      console.error('Email Sign-Up Error:', err);
+      const msg = err.message || 'Unable to register account. Please check inputs.';
       setError(msg);
-      setLoading(false);
       throw err;
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Instant Demo Portal Sign In
+  const loginAsDemo = (role: 'Patient' | 'Doctor' | 'Admin' = 'Patient') => {
+    setLoading(true);
+    setError(null);
+    localStorage.setItem('mediguard_demo_session', 'true');
+    setIsAuthenticated(true);
+
+    if (role === 'Doctor') {
+      setUserProfile({
+        ...MOCK_USER,
+        fullName: 'Dr. Sarah Jenkins, MD',
+        email: 's.jenkins@mediguard.org',
+        role: 'Doctor',
+      });
+    } else if (role === 'Admin') {
+      setUserProfile({
+        ...MOCK_USER,
+        fullName: 'Admin Chief Compliance Officer',
+        email: 'admin@mediguard.org',
+        role: 'Admin',
+      });
+    } else {
+      setUserProfile({
+        ...MOCK_USER,
+        fullName: 'Alexander Vance',
+        email: 'alex.vance@example.com',
+        role: 'Patient',
+      });
+    }
+    setLoading(false);
   };
 
   // Sign Out
@@ -200,7 +336,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading: loading,
         loading,
         error,
-        signInWithGoogle,
+        signInWithEmail,
+        signUpWithEmail,
+        loginAsDemo,
         logout,
         clearError,
         setUserProfile,

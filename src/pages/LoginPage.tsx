@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Shield, CheckCircle2, AlertCircle, Mail, Lock, User as UserIcon, Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../hooks/useAuth';
-import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
 
 export const LoginPage: React.FC = () => {
   const { setCurrentPage, addToast } = useApp();
-  const { signInWithGoogle, isLoading, error, isAuthenticated } = useAuth();
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { signInWithEmail, signUpWithEmail, loginAsDemo, isLoading, error, isAuthenticated } = useAuth();
+
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // If already authenticated, redirect to dashboard
   React.useEffect(() => {
@@ -16,30 +20,55 @@ export const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, setCurrentPage]);
 
-  const handleGoogleSignIn = async () => {
-    setIsConnecting(true);
-    try {
-      await signInWithGoogle();
-      addToast({
-        type: 'info',
-        title: 'Redirecting to Google Sign-In',
-        message: 'Connecting securely via Supabase Google OAuth...',
-      });
-    } catch (err: any) {
-      console.error('Google Auth Failed:', err);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
       addToast({
         type: 'error',
-        title: 'Authentication Error',
-        message: err.message || 'Unable to complete Google Sign-In. Please check your connection.',
+        title: 'Validation Error',
+        message: 'Please enter both your email address and password.',
       });
-    } finally {
-      setIsConnecting(false);
+      return;
     }
+
+    setIsSubmitting(true);
+    try {
+      if (mode === 'signup') {
+        await signUpWithEmail(email, password, fullName);
+        addToast({
+          type: 'success',
+          title: 'Account Created',
+          message: 'Welcome to MediGuard AI! Redirecting to your clinical portal...',
+        });
+      } else {
+        await signInWithEmail(email, password);
+        addToast({
+          type: 'success',
+          title: 'Signed In',
+          message: 'Secure session restored. Welcome back to MediGuard AI.',
+        });
+      }
+      setCurrentPage('dashboard');
+    } catch (err: any) {
+      console.error('Auth Error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDemoLogin = (role: 'Patient' | 'Doctor' | 'Admin') => {
+    loginAsDemo(role);
+    addToast({
+      type: 'info',
+      title: 'Demo Session Active',
+      message: `Signed in to MediGuard AI as ${role}.`,
+    });
+    setCurrentPage('dashboard');
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans">
-      <div className="w-full max-w-4xl bg-white rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[540px]">
+      <div className="w-full max-w-4xl bg-white rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px]">
         {/* Left Panel: Healthcare Branding */}
         <div className="md:col-span-5 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-8 sm:p-10 text-white flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -54,7 +83,7 @@ export const LoginPage: React.FC = () => {
             </div>
             <div>
               <span className="text-lg font-black tracking-tight">MediGuard AI</span>
-              <p className="text-[10px] text-blue-200 font-medium">CLINICAL SAFETY PORTAL</p>
+              <p className="text-[10px] text-blue-200 font-medium tracking-wider">CLINICAL SAFETY PORTAL</p>
             </div>
           </div>
 
@@ -62,7 +91,7 @@ export const LoginPage: React.FC = () => {
           <div className="space-y-5 my-8 z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Google OAuth & Supabase Vault</span>
+              <span>Encrypted Patient Vault & AI Engine</span>
             </div>
 
             <h2 className="text-2xl font-black leading-snug">
@@ -70,26 +99,54 @@ export const LoginPage: React.FC = () => {
             </h2>
 
             <p className="text-xs text-blue-100/90 leading-relaxed">
-              Sign in with Google to view active medication reminders, check drug interaction warnings, and access your clinical history.
+              Sign in to view active medication reminders, check drug interaction warnings, and access your clinical history.
             </p>
           </div>
 
           {/* Security Badge */}
           <div className="pt-4 border-t border-white/15 z-10 text-[11px] text-blue-200 font-medium">
-            🔒 Protected by 256-bit SSL encryption & HIPAA-compliant OAuth token architecture.
+            🔒 Protected by 256-bit SSL encryption & HIPAA-compliant data security.
           </div>
         </div>
 
-        {/* Right Panel: Single Authentication Option - Continue with Google */}
-        <div className="md:col-span-7 p-8 sm:p-12 flex flex-col justify-center">
-          <div className="max-w-md w-full mx-auto space-y-6">
+        {/* Right Panel: Authentication Form */}
+        <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-between">
+          <div className="max-w-md w-full mx-auto space-y-5">
+            {/* Header & Tabs */}
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-bold mb-3">
-                <span>Single Sign-On</span>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-extrabold text-blue-700 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-wider">
+                  Secure Access
+                </span>
+                <div className="flex gap-1 p-1 bg-slate-100 rounded-xl text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setMode('signin')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      mode === 'signin' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode('signup')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      mode === 'signup' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    Create Account
+                  </button>
+                </div>
               </div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Sign In to MediGuard</h3>
-              <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                MediGuard uses Google OAuth for passwordless, medical-grade authentication.
+
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                {mode === 'signin' ? 'Welcome Back' : 'Create MediGuard Account'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                {mode === 'signin'
+                  ? 'Enter your credentials to access your medication portal.'
+                  : 'Register a new patient profile to enable AI prescription scanning.'}
               </p>
             </div>
 
@@ -103,31 +160,114 @@ export const LoginPage: React.FC = () => {
               </div>
             )}
 
-            {/* Single Authentication Button: Continue with Google */}
-            <div className="space-y-4 pt-2">
-              <GoogleSignInButton
-                onClick={handleGoogleSignIn}
-                isLoading={isConnecting || isLoading}
-                label="Continue with Google"
-              />
+            {/* Form Inputs */}
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                  <div className="relative">
+                    <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Dr. Alexander Vance"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                    />
+                  </div>
+                </div>
+              )}
 
-              <p className="text-[11px] text-center text-slate-400 leading-normal">
-                By continuing with Google, you agree to MediGuard's AI Clinical Safety Terms of Service & Privacy Policy.
-              </p>
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="patient@example.com"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                  />
+                </div>
+              </div>
 
-            <div className="pt-6 border-t border-slate-100 flex items-center justify-between text-xs">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                  />
+                </div>
+              </div>
+
               <button
-                onClick={() => setCurrentPage('landing')}
-                className="font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                type="submit"
+                disabled={isSubmitting || isLoading}
+                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-600/20 hover:shadow-blue-600/30 transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                ← Back to Home
+                {isSubmitting || isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <span>{mode === 'signin' ? 'Sign In to Portal' : 'Create Account'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
-              <span className="text-[11px] text-slate-400 font-medium">Supabase Auth Enabled</span>
+            </form>
+
+            {/* Quick Demo Access Divider */}
+            <div className="relative pt-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
+                <span className="bg-white px-3 text-slate-400">Or Instant Demo Access</span>
+              </div>
             </div>
+
+            {/* Quick Portal Demo Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('Patient')}
+                className="py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-700 text-center transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <span>Patient Portal</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('Doctor')}
+                className="py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-700 text-center transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Clinician Portal</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs mt-4">
+            <button
+              onClick={() => setCurrentPage('landing')}
+              className="font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+            >
+              ← Back to Home
+            </button>
+            <span className="text-[11px] text-slate-400 font-medium">Supabase Auth Integrated</span>
           </div>
         </div>
       </div>
     </div>
   );
 };
+

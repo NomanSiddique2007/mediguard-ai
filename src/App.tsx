@@ -52,7 +52,7 @@ const AppContent: React.FC = () => {
           </div>
           <div>
             <h3 className="text-base font-extrabold text-slate-900">Verifying Security Session</h3>
-            <p className="text-xs text-slate-500 mt-1">Restoring Google OAuth session & patient profile...</p>
+            <p className="text-xs text-slate-500 mt-1">Restoring security session & patient profile...</p>
           </div>
         </div>
       </div>
