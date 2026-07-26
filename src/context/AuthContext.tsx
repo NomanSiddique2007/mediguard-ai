@@ -105,8 +105,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const { data: { session: currentSession }, error: sessionErr } = await supabase.auth.getSession();
-        console.log("Session:", currentSession);
-        console.log("Current User:", currentSession?.user);
 
         if (sessionErr) {
           throw sessionErr;
@@ -117,10 +115,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(currentSession);
             setUser(currentSession.user);
             setIsAuthenticated(true);
-            await handleAuthUserSync(currentSession.user);
+            handleAuthUserSync(currentSession.user).catch((err) =>
+              console.error('Non-blocking user sync error:', err)
+            );
           }
         } else {
-          if (mounted) {
+          // Check if URL has OAuth redirect parameters (?code= or #access_token=)
+          const hasOAuthCallbackParams =
+            typeof window !== 'undefined' &&
+            (window.location.search.includes('code=') || window.location.hash.includes('access_token='));
+
+          if (!hasOAuthCallbackParams && mounted) {
             setSession(null);
             setUser(null);
             setIsAuthenticated(false);
@@ -130,7 +135,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Session restoration error:', err);
         if (mounted) {
           setError(err.message || 'Network error restoring session.');
-          setIsAuthenticated(false);
         }
       } finally {
         if (mounted) setLoading(false);
@@ -141,15 +145,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (isSupabaseConfigured()) {
       const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-        console.log("Auth Event:", event);
-        console.log("Session:", currentSession);
-        console.log("Current User:", currentSession?.user);
-
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && currentSession?.user) {
           setSession(currentSession);
           setUser(currentSession.user);
           setIsAuthenticated(true);
-          await handleAuthUserSync(currentSession.user);
+          handleAuthUserSync(currentSession.user).catch((err) =>
+            console.error('Non-blocking user sync error on auth state change:', err)
+          );
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
