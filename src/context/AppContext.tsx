@@ -88,11 +88,90 @@ interface AppContextType {
   loginDemo: (role: 'Patient' | 'Doctor' | 'Admin') => void;
 }
 
+const getRouteFromPathname = (pathname: string): PageRoute => {
+  const cleanPath = pathname.replace(/\/$/, '').toLowerCase();
+  switch (cleanPath) {
+    case '':
+    case '/':
+      return 'landing';
+    case '/login':
+      return 'login';
+    case '/auth/callback':
+    case '/auth-callback':
+      return 'auth-callback';
+    case '/dashboard':
+      return 'dashboard';
+    case '/upload':
+      return 'upload';
+    case '/history':
+      return 'history';
+    case '/details':
+      return 'details';
+    case '/library':
+      return 'library';
+    case '/timeline':
+      return 'timeline';
+    case '/reminders':
+      return 'reminders';
+    case '/report':
+      return 'report';
+    case '/profile':
+      return 'profile';
+    case '/settings':
+      return 'settings';
+    case '/admin':
+      return 'admin';
+    default:
+      return 'landing';
+  }
+};
+
+const getPathFromRoute = (route: PageRoute): string => {
+  switch (route) {
+    case 'landing':
+      return '/';
+    case 'login':
+      return '/login';
+    case 'auth-callback':
+      return '/auth/callback';
+    case 'dashboard':
+      return '/dashboard';
+    case 'upload':
+      return '/upload';
+    case 'history':
+      return '/history';
+    case 'details':
+      return '/details';
+    case 'library':
+      return '/library';
+    case 'timeline':
+      return '/timeline';
+    case 'reminders':
+      return '/reminders';
+    case 'report':
+      return '/report';
+    case 'profile':
+      return '/profile';
+    case 'settings':
+      return '/settings';
+    case 'admin':
+      return '/admin';
+    case '404':
+    default:
+      return '/404';
+  }
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const auth = useAuth();
-  const [currentPage, setCurrentPageState] = useState<PageRoute>('landing');
+  const [currentPage, setCurrentPageState] = useState<PageRoute>(() => {
+    if (typeof window !== 'undefined') {
+      return getRouteFromPathname(window.location.pathname);
+    }
+    return 'landing';
+  });
   const [selectedPrescriptionId, setSelectedPrescriptionId] = useState<string | null>('rx-001');
   
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -190,8 +269,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPageState(getRouteFromPathname(window.location.pathname));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const setCurrentPage = (page: PageRoute) => {
     setCurrentPageState(page);
+    if (typeof window !== 'undefined') {
+      const targetPath = getPathFromRoute(page);
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({}, '', targetPath);
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

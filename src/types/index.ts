@@ -1,6 +1,7 @@
 export type PageRoute =
   | 'landing'
   | 'login'
+  | 'auth-callback'
   | 'dashboard'
   | 'upload'
   | 'history'

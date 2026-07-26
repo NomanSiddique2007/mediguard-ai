@@ -19,6 +19,7 @@ const queryClient = new QueryClient({
 // Pages
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
+import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { UploadPrescriptionPage } from './pages/UploadPrescriptionPage';
 import { PrescriptionHistoryPage } from './pages/PrescriptionHistoryPage';
@@ -38,6 +39,7 @@ const AppContent: React.FC = () => {
   // Public Fullscreen Pages (No Dashboard Sidebar/Header)
   if (currentPage === 'landing') return <LandingPage />;
   if (currentPage === 'login') return <LoginPage />;
+  if (currentPage === 'auth-callback') return <AuthCallbackPage />;
   if (currentPage === '404') return <NotFoundPage />;
 
   // Page title mapping for Dashboard Header
