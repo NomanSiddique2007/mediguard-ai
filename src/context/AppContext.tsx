@@ -97,18 +97,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Auto-navigate to dashboard upon authentication restore / Google OAuth completion
   useEffect(() => {
-    if (!auth.isLoading) {
+    if (!auth.isLoading && !auth.loading) {
       if (auth.isAuthenticated) {
         if (currentPage === 'landing' || currentPage === 'login') {
           setCurrentPageState('dashboard');
         }
-      } else {
-        if (currentPage !== 'landing' && currentPage !== 'login') {
-          setCurrentPageState('landing');
-        }
       }
     }
-  }, [auth.isAuthenticated, auth.isLoading, currentPage]);
+  }, [auth.isAuthenticated, auth.isLoading, auth.loading, currentPage]);
   
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [reminders, setReminders] = useState<MedicationReminder[]>([]);

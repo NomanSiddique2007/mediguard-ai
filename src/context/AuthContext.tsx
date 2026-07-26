@@ -11,6 +11,7 @@ interface AuthContextType {
   userProfile: UserProfile;
   isAuthenticated: boolean;
   isLoading: boolean;
+  loading: boolean;
   error: string | null;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
@@ -25,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>(MOCK_USER);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const clearError = () => setError(null);
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
 
     const initSession = async () => {
-      setIsLoading(true);
+      setLoading(true);
       try {
         if (!isSupabaseConfigured()) {
           // If Supabase credentials are not set, preserve local session state for dev preview
@@ -99,21 +100,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else {
             setIsAuthenticated(false);
           }
-          setIsLoading(false);
+          if (mounted) setLoading(false);
           return;
         }
 
-        const { data, error: sessionErr } = await supabase.auth.getSession();
+        const { data: { session: currentSession }, error: sessionErr } = await supabase.auth.getSession();
+        console.log("Session:", currentSession);
+        console.log("Current User:", currentSession?.user);
+
         if (sessionErr) {
           throw sessionErr;
         }
 
-        if (data.session && data.session.user) {
+        if (currentSession && currentSession.user) {
           if (mounted) {
-            setSession(data.session);
-            setUser(data.session.user);
+            setSession(currentSession);
+            setUser(currentSession.user);
             setIsAuthenticated(true);
-            await handleAuthUserSync(data.session.user);
+            await handleAuthUserSync(currentSession.user);
           }
         } else {
           if (mounted) {
@@ -129,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAuthenticated(false);
         }
       } finally {
-        if (mounted) setIsLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
@@ -137,6 +141,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (isSupabaseConfigured()) {
       const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        console.log("Auth Event:", event);
+        console.log("Session:", currentSession);
+        console.log("Current User:", currentSession?.user);
+
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && currentSession?.user) {
           setSession(currentSession);
           setUser(currentSession.user);
@@ -148,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAuthenticated(false);
           setUserProfile(MOCK_USER);
         }
-        setIsLoading(false);
+        if (mounted) setLoading(false);
       });
 
       return () => {
@@ -160,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Google OAuth Sign In
   const signInWithGoogle = async () => {
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
 
     try {
@@ -174,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: 'alexander.vance@gmail.com',
           avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
         });
-        setIsLoading(false);
+        setLoading(false);
         return;
       }
 
@@ -198,14 +206,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Google Sign-In Error:', err);
       const msg = err.message || 'Google authentication was cancelled or failed due to network connectivity.';
       setError(msg);
-      setIsLoading(false);
+      setLoading(false);
       throw err;
     }
   };
 
   // Sign Out
   const logout = async () => {
-    setIsLoading(true);
+    setLoading(true);
     try {
       if (isSupabaseConfigured()) {
         await supabase.auth.signOut();
@@ -218,7 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('Sign out error:', err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -229,7 +237,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         userProfile,
         isAuthenticated,
-        isLoading,
+        isLoading: loading,
+        loading,
         error,
         signInWithGoogle,
         logout,
