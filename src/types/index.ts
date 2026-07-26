@@ -1,9 +1,6 @@
 export type PageRoute =
   | 'landing'
   | 'login'
-  | 'register'
-  | 'email-verification'
-  | 'forgot-password'
   | 'dashboard'
   | 'upload'
   | 'history'

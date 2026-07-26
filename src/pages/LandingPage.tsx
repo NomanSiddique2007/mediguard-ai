@@ -418,13 +418,10 @@ export const LandingPage: React.FC = () => {
               <h5 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Portals</h5>
               <ul className="space-y-2.5 text-xs text-slate-400">
                 <li className="hover:text-white cursor-pointer" onClick={() => setCurrentPage('login')}>
-                  Patient Login
-                </li>
-                <li className="hover:text-white cursor-pointer" onClick={() => setCurrentPage('register')}>
-                  Doctor Registration
+                  Google Sign-In
                 </li>
                 <li className="hover:text-white cursor-pointer" onClick={() => setCurrentPage('dashboard')}>
-                  Clinical Dashboard
+                  Patient Dashboard
                 </li>
               </ul>
             </div>

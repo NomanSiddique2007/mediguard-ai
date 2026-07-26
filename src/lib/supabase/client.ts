@@ -31,7 +31,7 @@ export const authService = {
     if (!isSupabaseConfigured()) {
       return { data: { user: null, session: null }, error: new Error('Supabase is not configured') };
     }
-    const redirectUrl = 'https://mediguard-ai-ruby.vercel.app/';
+    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
     return await supabase.auth.signUp({
       email,
       password,
@@ -53,6 +53,19 @@ export const authService = {
     return await supabase.auth.signInWithPassword({ email, password });
   },
 
+  async signInWithGoogle() {
+    if (!isSupabaseConfigured()) {
+      return { data: null, error: new Error('Supabase is not configured') };
+    }
+    const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined;
+    return await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+      },
+    });
+  },
+
   async signOut() {
     if (!isSupabaseConfigured()) return { error: null };
     return await supabase.auth.signOut();
@@ -62,7 +75,7 @@ export const authService = {
     if (!isSupabaseConfigured()) {
       return { data: null, error: new Error('Supabase is not configured') };
     }
-    const redirectUrl = 'https://mediguard-ai-ruby.vercel.app/';
+    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
     return await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });

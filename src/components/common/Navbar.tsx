@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Shield, Upload, ArrowRight, Menu, X, Sparkles, UserCheck } from 'lucide-react';
+import { Shield, Upload, Menu, X, UserCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Navbar: React.FC = () => {
   const { currentPage, setCurrentPage } = useApp();
+  const { isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -14,7 +16,7 @@ export const Navbar: React.FC = () => {
     { label: 'FAQ', href: '#faq' },
   ];
 
-  const handleNavClick = (link: typeof navLinks[0]) => {
+  const handleNavClick = (link: (typeof navLinks)[0]) => {
     setMobileMenuOpen(false);
     if (link.page) {
       setCurrentPage(link.page);
@@ -33,7 +35,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/80 border-b border-slate-200/80 transition-all duration-200">
+    <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/80 border-b border-slate-200/80 transition-all duration-200 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
         {/* Brand Logo */}
         <div
@@ -69,20 +71,31 @@ export const Navbar: React.FC = () => {
 
         {/* Right CTA Actions */}
         <div className="hidden md:flex items-center gap-3">
-          <button
-            onClick={() => setCurrentPage('login')}
-            className="text-sm font-semibold text-slate-700 hover:text-blue-600 px-3 py-2 rounded-xl transition-colors"
-          >
-            Sign In
-          </button>
+          {isAuthenticated ? (
+            <>
+              <button
+                onClick={() => setCurrentPage('dashboard')}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3.5 py-2 rounded-xl transition-all"
+              >
+                <UserCheck className="w-4 h-4 text-blue-600" />
+                <span>Patient Portal</span>
+              </button>
 
-          <button
-            onClick={() => setCurrentPage('dashboard')}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3.5 py-2 rounded-xl transition-all"
-          >
-            <UserCheck className="w-4 h-4 text-blue-600" />
-            <span>Patient Portal</span>
-          </button>
+              <button
+                onClick={() => logout()}
+                className="text-xs font-semibold text-slate-600 hover:text-red-600 px-3 py-2 rounded-xl transition-colors"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setCurrentPage('login')}
+              className="text-sm font-semibold text-slate-700 hover:text-blue-600 px-3.5 py-2 rounded-xl transition-colors border border-slate-200/80 hover:border-blue-300"
+            >
+              Sign In with Google
+            </button>
+          )}
 
           <button
             onClick={() => setCurrentPage('upload')}
@@ -139,26 +152,15 @@ export const Navbar: React.FC = () => {
               Dashboard Portal
             </button>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setCurrentPage('login');
-                }}
-                className="py-2 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setCurrentPage('register');
-                }}
-                className="py-2 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl"
-              >
-                Register
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setCurrentPage('login');
+              }}
+              className="w-full py-2 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl"
+            >
+              Continue with Google
+            </button>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastContainer } from './components/common/ToastContainer';
 import { Sidebar } from './components/common/Sidebar';
@@ -18,9 +19,6 @@ const queryClient = new QueryClient({
 // Pages
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { EmailVerificationPage } from './pages/EmailVerificationPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { UploadPrescriptionPage } from './pages/UploadPrescriptionPage';
 import { PrescriptionHistoryPage } from './pages/PrescriptionHistoryPage';
@@ -40,9 +38,6 @@ const AppContent: React.FC = () => {
   // Public Fullscreen Pages (No Dashboard Sidebar/Header)
   if (currentPage === 'landing') return <LandingPage />;
   if (currentPage === 'login') return <LoginPage />;
-  if (currentPage === 'register') return <RegisterPage />;
-  if (currentPage === 'email-verification') return <EmailVerificationPage />;
-  if (currentPage === 'forgot-password') return <ForgotPasswordPage />;
   if (currentPage === '404') return <NotFoundPage />;
 
   // Page title mapping for Dashboard Header
@@ -109,10 +104,12 @@ const AppContent: React.FC = () => {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <AppContent />
-        <ToastContainer />
-      </AppProvider>
+      <AuthProvider>
+        <AppProvider>
+          <AppContent />
+          <ToastContainer />
+        </AppProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
