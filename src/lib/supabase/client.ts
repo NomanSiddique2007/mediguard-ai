@@ -57,7 +57,7 @@ export const authService = {
     if (!isSupabaseConfigured()) {
       return { data: null, error: new Error('Supabase is not configured') };
     }
-    const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
     return await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
