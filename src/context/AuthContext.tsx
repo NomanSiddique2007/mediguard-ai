@@ -118,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             handleAuthUserSync(currentSession.user).catch((err) =>
               console.error('Non-blocking user sync error:', err)
             );
+            setLoading(false);
           }
         } else {
           // Check if URL has OAuth redirect parameters (?code= or #access_token=)
@@ -125,19 +126,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             typeof window !== 'undefined' &&
             (window.location.search.includes('code=') || window.location.hash.includes('access_token='));
 
-          if (!hasOAuthCallbackParams && mounted) {
-            setSession(null);
-            setUser(null);
-            setIsAuthenticated(false);
+          if (hasOAuthCallbackParams) {
+            // Keep loading = true to give onAuthStateChange time to process the OAuth callback
+            // Failsafe timer in case OAuth processing fails
+            setTimeout(() => {
+              if (mounted) setLoading(false);
+            }, 3500);
+          } else {
+            if (mounted) {
+              setSession(null);
+              setUser(null);
+              setIsAuthenticated(false);
+              setLoading(false);
+            }
           }
         }
       } catch (err: any) {
         console.error('Session restoration error:', err);
         if (mounted) {
           setError(err.message || 'Network error restoring session.');
+          setLoading(false);
         }
-      } finally {
-        if (mounted) setLoading(false);
       }
     };
 

@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 
 export const Navbar: React.FC = () => {
   const { currentPage, setCurrentPage } = useApp();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, signInWithGoogle } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -90,7 +90,13 @@ export const Navbar: React.FC = () => {
             </>
           ) : (
             <button
-              onClick={() => setCurrentPage('login')}
+              onClick={async () => {
+                try {
+                  await signInWithGoogle();
+                } catch {
+                  setCurrentPage('login');
+                }
+              }}
               className="text-sm font-semibold text-slate-700 hover:text-blue-600 px-3.5 py-2 rounded-xl transition-colors border border-slate-200/80 hover:border-blue-300"
             >
               Sign In with Google
@@ -153,9 +159,13 @@ export const Navbar: React.FC = () => {
             </button>
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 setMobileMenuOpen(false);
-                setCurrentPage('login');
+                try {
+                  await signInWithGoogle();
+                } catch {
+                  setCurrentPage('login');
+                }
               }}
               className="w-full py-2 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl"
             >
