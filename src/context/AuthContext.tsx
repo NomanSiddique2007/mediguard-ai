@@ -88,93 +88,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
-    const initSession = async () => {
-      setLoading(true);
-      try {
-        if (!isSupabaseConfigured()) {
-          // If Supabase credentials are not set, preserve local session state for dev preview
-          const localSession = localStorage.getItem('mediguard_demo_session');
-          if (localSession === 'true') {
-            setIsAuthenticated(true);
-            setUserProfile(MOCK_USER);
-          } else {
-            setIsAuthenticated(false);
-          }
-          if (mounted) setLoading(false);
-          return;
-        }
-
-        const { data: { session: currentSession }, error: sessionErr } = await supabase.auth.getSession();
-
-        if (sessionErr) {
-          throw sessionErr;
-        }
-
-        if (currentSession && currentSession.user) {
-          if (mounted) {
-            setSession(currentSession);
-            setUser(currentSession.user);
-            setIsAuthenticated(true);
-            handleAuthUserSync(currentSession.user).catch((err) =>
-              console.error('Non-blocking user sync error:', err)
-            );
-            setLoading(false);
-          }
-        } else {
-          // Check if URL has OAuth redirect parameters (?code= or #access_token=)
-          const hasOAuthCallbackParams =
-            typeof window !== 'undefined' &&
-            (window.location.search.includes('code=') || window.location.hash.includes('access_token='));
-
-          if (hasOAuthCallbackParams) {
-            // Keep loading = true to give onAuthStateChange time to process the OAuth callback
-            // Failsafe timer in case OAuth processing fails
-            setTimeout(() => {
-              if (mounted) setLoading(false);
-            }, 3500);
-          } else {
-            if (mounted) {
-              setSession(null);
-              setUser(null);
-              setIsAuthenticated(false);
-              setLoading(false);
-            }
-          }
-        }
-      } catch (err: any) {
-        console.error('Session restoration error:', err);
-        if (mounted) {
-          setError(err.message || 'Network error restoring session.');
-          setLoading(false);
-        }
+    if (!isSupabaseConfigured()) {
+      // If Supabase credentials are not set, preserve local session state for dev preview
+      const localSession = localStorage.getItem('mediguard_demo_session');
+      if (localSession === 'true') {
+        setIsAuthenticated(true);
+        setUserProfile(MOCK_USER);
+      } else {
+        setIsAuthenticated(false);
       }
-    };
-
-    initSession();
-
-    if (isSupabaseConfigured()) {
-      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && currentSession?.user) {
-          setSession(currentSession);
-          setUser(currentSession.user);
-          setIsAuthenticated(true);
-          handleAuthUserSync(currentSession.user).catch((err) =>
-            console.error('Non-blocking user sync error on auth state change:', err)
-          );
-        } else if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
-          setIsAuthenticated(false);
-          setUserProfile(MOCK_USER);
-        }
-        if (mounted) setLoading(false);
-      });
-
-      return () => {
-        mounted = false;
-        authListener.subscription.unsubscribe();
-      };
+      setLoading(false);
+      return;
     }
+
+    setLoading(true);
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && currentSession?.user) {
+        setSession(currentSession);
+        setUser(currentSession.user);
+        setIsAuthenticated(true);
+        handleAuthUserSync(currentSession.user).catch((err) =>
+          console.error('Non-blocking user sync error on auth state change:', err)
+        );
+      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !currentSession?.user)) {
+        setSession(null);
+        setUser(null);
+        setIsAuthenticated(false);
+        setUserProfile(MOCK_USER);
+      }
+      if (mounted) setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, [handleAuthUserSync]);
 
   // Google OAuth Sign In
