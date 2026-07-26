@@ -36,7 +36,7 @@ import { useAuth } from './context/AuthContext';
 
 const AppContent: React.FC = () => {
   const { currentPage, userRole } = useApp();
-  const { loading, isLoading } = useAuth();
+  const { loading, isLoading, isAuthenticated } = useAuth();
 
   const isAuthInitializing = loading || isLoading;
 
@@ -59,14 +59,19 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Public Fullscreen Pages (No Dashboard Sidebar/Header)
-  if (currentPage === 'landing') return <LandingPage />;
-  if (currentPage === 'login') return <LoginPage />;
-  if (currentPage === '404') return <NotFoundPage />;
+  // Public Fullscreen Pages (No Dashboard Sidebar/Header) - ONLY for unauthenticated users
+  if (!isAuthenticated) {
+    if (currentPage === 'login') return <LoginPage />;
+    if (currentPage === '404') return <NotFoundPage />;
+    return <LandingPage />;
+  }
+
+  // Active page for authenticated users (default to dashboard if currently on landing or login)
+  const activePage = (currentPage === 'landing' || currentPage === 'login') ? 'dashboard' : currentPage;
 
   // Page title mapping for Dashboard Header
   const getPageTitle = () => {
-    switch (currentPage) {
+    switch (activePage) {
       case 'dashboard':
         return { title: `${userRole} Portal`, subtitle: 'Overview & Medication Safety' };
       case 'upload':
@@ -107,17 +112,17 @@ const AppContent: React.FC = () => {
           <Header title={pageHeader.title} subtitle={pageHeader.subtitle} />
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-            {currentPage === 'dashboard' && <DashboardPage />}
-            {currentPage === 'admin' && <AdminDashboardPage />}
-            {currentPage === 'upload' && <UploadPrescriptionPage />}
-            {currentPage === 'history' && <PrescriptionHistoryPage />}
-            {currentPage === 'details' && <PrescriptionDetailsPage />}
-            {currentPage === 'library' && <MedicineLibraryPage />}
-            {currentPage === 'timeline' && <HealthTimelinePage />}
-            {currentPage === 'reminders' && <MedicationReminderPage />}
-            {currentPage === 'report' && <AIReportPage />}
-            {currentPage === 'profile' && <UserProfilePage />}
-            {currentPage === 'settings' && <SettingsPage />}
+            {activePage === 'dashboard' && <DashboardPage />}
+            {activePage === 'admin' && <AdminDashboardPage />}
+            {activePage === 'upload' && <UploadPrescriptionPage />}
+            {activePage === 'history' && <PrescriptionHistoryPage />}
+            {activePage === 'details' && <PrescriptionDetailsPage />}
+            {activePage === 'library' && <MedicineLibraryPage />}
+            {activePage === 'timeline' && <HealthTimelinePage />}
+            {activePage === 'reminders' && <MedicationReminderPage />}
+            {activePage === 'report' && <AIReportPage />}
+            {activePage === 'profile' && <UserProfilePage />}
+            {activePage === 'settings' && <SettingsPage />}
           </main>
         </div>
       </div>
